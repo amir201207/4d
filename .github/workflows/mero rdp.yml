@@ -1,4 +1,4 @@
-name: Windows RDP Auto Restart
+name: Windows RDP Free 6h
 
 on:
   workflow_dispatch:
@@ -6,31 +6,19 @@ on:
 jobs:
   build:
     runs-on: windows-latest
-    timeout-minutes: 360  # 6 ساعات لكل جلسة
-
     steps:
-    - name: Download ngrok
+    - name: إعداد RDP
       run: |
-        Invoke-WebRequest https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-windows-amd64.zip -OutFile ngrok.zip
-        Expand-Archive ngrok.zip
-        .\ngrok\ngrok.exe authtoken $Env:NGROK_TOKEN
-      env:
-        NGROK_TOKEN: ${{ secrets.NGROK_TOKEN }}
-
-    - name: Start RDP
-      run: |
+        echo "تجهيز RDP..."
         net user amir20120 "amiraliA@1" /add
         net localgroup administrators amir20120 /add
         reg add "HKLM\System\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
         Set-ItemProperty "HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" -Name "UserAuthentication" -Value 1
+        Invoke-WebRequest https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-windows-amd64.zip -OutFile ngrok.zip
+        Expand-Archive ngrok.zip
+        .\ngrok\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
         Start-Process powershell -ArgumentList "-NoProfile -WindowStyle Hidden -Command { .\ngrok\ngrok.exe tcp 3389 --region us }"
         echo "RDP session started. Username: amir20120 Password: amiraliA@1"
         echo "Session will auto-restart after 6 hours."
-        ping -n 21600 127.0.0.1 >nul  # انتظار 6 ساعات
-
-    - name: Restart Workflow
-      if: always()
-      run: gh workflow run "Windows RDP Auto Restart"
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        ping -n 21600 127.0.0.1 >nul
