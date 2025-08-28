@@ -1,11 +1,11 @@
-name: Windows RDP via Ngrok
+name: Windows RDP via Ngrok TCP
 on: workflow_dispatch
 
 jobs:
   build:
     runs-on: windows-latest
     steps:
-    - name: Download and Install Ngrok
+    - name: Download Ngrok
       run: |
         Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
         Expand-Archive ngrok.zip -DestinationPath ngrok
@@ -20,15 +20,18 @@ jobs:
         reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 
-    - name: Start Ngrok Tunnel and show TCP Address
+    - name: Start Ngrok TCP Tunnel
       run: |
-        Start-Process -FilePath .\ngrok\ngrok.exe -ArgumentList "tcp 3389 --log=stdout" -PassThru | Out-Null
+        # تشغيل ngrok TCP
+        Start-Process -FilePath .\ngrok\ngrok.exe -ArgumentList "tcp 3389" -NoNewWindow
         Start-Sleep -Seconds 10
+
+        # الحصول على رابط TCP من API
         $tunnels = Invoke-RestMethod http://127.0.0.1:4040/api/tunnels
         $tcpTunnel = $tunnels.tunnels | Where-Object { $_.proto -eq "tcp" }
         Write-Host "====================================="
-        Write-Host "Use this address in Remote Desktop:"
-        Write-Host $tcpTunnel.public_url
+        Write-Host "Use this TCP address in Remote Desktop:"
+        Write-Host $tcpTunnel.public_url  # هذا مثل 8.tcp.ngrok.io:17246
         Write-Host "Username: amir20120"
         Write-Host "Password: amiraliA@1"
         Write-Host "====================================="
