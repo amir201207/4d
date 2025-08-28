@@ -1,4 +1,4 @@
-name: Free Windows RDP
+name: Free Windows RDP with Cloudflare
 
 on:
   workflow_dispatch:
@@ -8,43 +8,30 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 360
     steps:
-      - name: Download Ngrok
+      - name: Install Cloudflare Tunnel
         run: |
-          Invoke-WebRequest https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-windows-amd64.zip -OutFile ngrok.zip
-          Expand-Archive ngrok.zip -DestinationPath ngrok-folder
-          dir ngrok-folder
-          if (Test-Path "ngrok-folder\ngrok.exe") {
-            Move-Item -Path ngrok-folder\ngrok.exe -Destination C:\Windows\System32\ngrok.exe
-          } else {
-            Write-Host "ngrok.exe غير موجود في المجلد بعد فك الضغط!"
-            exit 1
-          }
-
-      - name: Setup Ngrok
-        run: ngrok authtoken YOUR_NGROK_AUTHTOKEN_HERE
+          Invoke-WebRequest https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe -OutFile cloudflared.exe
+          Move-Item cloudflared.exe C:\Windows\System32\cloudflared.exe
 
       - name: Enable RDP
         run: |
           net user amir20120 amiraliA@1 /add
           net localgroup administrators amir20120 /add
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -Value 0
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
           Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
 
-      - name: Start Ngrok Tunnel
+      - name: Start RDP Tunnel
         run: |
-          Start-Process ngrok tcp 3389 --region us
+          cloudflared tunnel --url tcp://localhost:3389 --no-autoupdate > tunnel.log 2>&1 &
           Start-Sleep -Seconds 10
-          Invoke-WebRequest http://127.0.0.1:4040/api/tunnels > tunnels.json
-          Get-Content tunnels.json
+          type tunnel.log
 
       - name: Show Connection Info
         run: |
-          echo "==========================="
+          echo "====================================="
           echo "استخدم هذا العنوان في برنامج Remote Desktop"
-          echo "==========================="
-          type tunnels.json
-          echo "==========================="
           echo "اسم المستخدم: amir20120"
           echo "كلمة المرور: amiraliA@1"
-          echo "==========================="
+          echo "====================================="
+          type tunnel.log
