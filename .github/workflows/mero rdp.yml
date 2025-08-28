@@ -1,24 +1,20 @@
-name: Windows RDP Free 6h
+name: "Windows 11 with Auto-Restart"
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "0 */6 * * *"  # إعادة التشغيل كل 6 ساعات
 
 jobs:
   build:
     runs-on: windows-latest
+    timeout-minutes: 360  # 6 ساعات كحد أقصى
+
     steps:
-    - name: إعداد RDP
+    - name: Download RDP setup
       run: |
-        echo "تجهيز RDP..."
-        net user amir20120 "amiraliA@1" /add
-        net localgroup administrators amir20120 /add
-        reg add "HKLM\System\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f
-        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-        Set-ItemProperty "HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" -Name "UserAuthentication" -Value 1
-        Invoke-WebRequest https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-windows-amd64.zip -OutFile ngrok.zip
-        Expand-Archive ngrok.zip
-        .\ngrok\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
-        Start-Process powershell -ArgumentList "-NoProfile -WindowStyle Hidden -Command { .\ngrok\ngrok.exe tcp 3389 --region us }"
-        echo "RDP session started. Username: amir20120 Password: amiraliA@1"
-        echo "Session will auto-restart after 6 hours."
-        ping -n 21600 127.0.0.1 >nul
+        Invoke-WebRequest -Uri "https://raw.githubusercontent.com/iamshahzaib/EnigMano/main/EnigMano-Instance.ps1" -OutFile "EnigMano-Instance.ps1"
+
+    - name: Run RDP
+      run: |
+        powershell -ExecutionPolicy Bypass -File ".\EnigMano-Instance.ps1" -username "amir20120" -password "amiraliA@1" -ngrok_token "${{ secrets.NGROK_TOKEN }}"
