@@ -6,14 +6,14 @@ on:
 jobs:
   build:
     runs-on: windows-latest
-    timeout-minutes: 360  # 6 ساعات كحد أقصى
+    timeout-minutes: 360
     steps:
       - name: Download Ngrok
         run: |
           Invoke-WebRequest https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-windows-amd64.zip -OutFile ngrok.zip
-          Expand-Archive ngrok.zip
-          move .\ngrok.exe C:\Windows\System32\ngrok.exe
-          
+          Expand-Archive ngrok.zip -DestinationPath .
+          Move-Item -Path .\ngrok\ngrok.exe -Destination C:\Windows\System32\ngrok.exe
+
       - name: Setup Ngrok
         run: ngrok authtoken YOUR_NGROK_AUTHTOKEN_HERE
 
