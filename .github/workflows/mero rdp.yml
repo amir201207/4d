@@ -9,7 +9,6 @@ jobs:
       run: |
         Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
         Expand-Archive ngrok.zip -DestinationPath ngrok
-        $Env:Path += ";$PWD\ngrok"
         .\ngrok\ngrok.exe config add-authtoken $Env:NGROK_AUTH_TOKEN
       env:
         NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
@@ -21,6 +20,15 @@ jobs:
         reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 
-    - name: Start Ngrok Tunnel for RDP
+    - name: Start Ngrok Tunnel and show TCP Address
       run: |
-        Start-Process powershell -ArgumentList "-NoExit", "-Command", ".\ngrok\ngrok.exe tcp 3389"
+        Start-Process -FilePath .\ngrok\ngrok.exe -ArgumentList "tcp 3389 --log=stdout" -PassThru | Out-Null
+        Start-Sleep -Seconds 10
+        $tunnels = Invoke-RestMethod http://127.0.0.1:4040/api/tunnels
+        $tcpTunnel = $tunnels.tunnels | Where-Object { $_.proto -eq "tcp" }
+        Write-Host "====================================="
+        Write-Host "Use this address in Remote Desktop:"
+        Write-Host $tcpTunnel.public_url
+        Write-Host "Username: amir20120"
+        Write-Host "Password: amiraliA@1"
+        Write-Host "====================================="
