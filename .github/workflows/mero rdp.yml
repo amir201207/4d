@@ -1,20 +1,44 @@
-name: "Windows 11 with Auto-Restart"
+name: Free Windows RDP
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 */6 * * *"  # إعادة التشغيل كل 6 ساعات
 
 jobs:
   build:
     runs-on: windows-latest
     timeout-minutes: 360  # 6 ساعات كحد أقصى
-
     steps:
-    - name: Download RDP setup
-      run: |
-        Invoke-WebRequest -Uri "https://raw.githubusercontent.com/iamshahzaib/EnigMano/main/EnigMano-Instance.ps1" -OutFile "EnigMano-Instance.ps1"
+      - name: Download Ngrok
+        run: |
+          Invoke-WebRequest https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-windows-amd64.zip -OutFile ngrok.zip
+          Expand-Archive ngrok.zip
+          move .\ngrok.exe C:\Windows\System32\ngrok.exe
+          
+      - name: Setup Ngrok
+        run: ngrok authtoken YOUR_NGROK_AUTHTOKEN_HERE
 
-    - name: Run RDP
-      run: |
-        powershell -ExecutionPolicy Bypass -File ".\EnigMano-Instance.ps1" -username "amir20120" -password "amiraliA@1" -ngrok_token "${{ secrets.NGROK_TOKEN }}"
+      - name: Enable RDP
+        run: |
+          net user amir20120 amiraliA@1 /add
+          net localgroup administrators amir20120 /add
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -Value 0
+          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
+
+      - name: Start Ngrok Tunnel
+        run: |
+          Start-Process ngrok tcp 3389 --region us
+          Start-Sleep -Seconds 10
+          Invoke-WebRequest http://127.0.0.1:4040/api/tunnels > tunnels.json
+          Get-Content tunnels.json
+
+      - name: Show Connection Info
+        run: |
+          echo "==========================="
+          echo "استخدم هذا العنوان في برنامج Remote Desktop"
+          echo "==========================="
+          type tunnels.json
+          echo "==========================="
+          echo "اسم المستخدم: amir20120"
+          echo "كلمة المرور: amiraliA@1"
+          echo "==========================="
