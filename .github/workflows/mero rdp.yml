@@ -11,8 +11,14 @@ jobs:
       - name: Download Ngrok
         run: |
           Invoke-WebRequest https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-windows-amd64.zip -OutFile ngrok.zip
-          Expand-Archive ngrok.zip -DestinationPath .
-          Move-Item -Path .\ngrok\ngrok.exe -Destination C:\Windows\System32\ngrok.exe
+          Expand-Archive ngrok.zip -DestinationPath ngrok-folder
+          dir ngrok-folder
+          if (Test-Path "ngrok-folder\ngrok.exe") {
+            Move-Item -Path ngrok-folder\ngrok.exe -Destination C:\Windows\System32\ngrok.exe
+          } else {
+            Write-Host "ngrok.exe غير موجود في المجلد بعد فك الضغط!"
+            exit 1
+          }
 
       - name: Setup Ngrok
         run: ngrok authtoken YOUR_NGROK_AUTHTOKEN_HERE
