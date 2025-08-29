@@ -1,4 +1,4 @@
-name: "⚡ EnigMano Windows 11 Deployment"
+name: "⚡ EnigMano Windows 11 Full Deployment"
 
 on:
   workflow_dispatch:
@@ -15,7 +15,11 @@ jobs:
 
     env:
       INSTANCE_ID: ${{ github.event.inputs.INSTANCE }}
-      NGROK_AUTHTOKEN: ${{ secrets.NGROK_SHAHZAIB }}
+      SECRET_SHAHZAIB: ${{ secrets.SECRET_SHAHZAIB }}
+      NGROK_SHAHZAIB: ${{ secrets.NGROK_SHAHZAIB }}
+      REPO: ${{ github.repository }}
+      WORKFLOW_FILE: "enigmano-Win-11.yml"
+      DEPLOYMENT_ID: ${{ github.run_id }}
 
     steps:
       - name: 📌 Deployment Parameters
@@ -25,14 +29,32 @@ jobs:
           Write-Host "==============================================="
           Write-Host "🔹 EnigMano Instance     : $env:INSTANCE_ID"
           Write-Host "🔢 Previous Instance     : $prevInstance"
+          Write-Host "📦 GitHub Repository     : $env:REPO"
+          Write-Host "🔁 Deployment Workflow   : $env:WORKFLOW_FILE"
+          Write-Host "🆔 Deployment ID         : $env:DEPLOYMENT_ID"
           Write-Host "==============================================="
+
+      - name: 🔐 Validate Secrets
+        shell: pwsh
+        run: |
+          if (-not $env:SECRET_SHAHZAIB) { Write-Error "❌ Missing SECRET_SHAHZAIB"; exit 1 }
+          if (-not $env:NGROK_SHAHZAIB) { Write-Error "❌ Missing NGROK_SHAHZAIB"; exit 1 }
+          Write-Host "✅ All secrets validated"
+
+      - name: 📥 Download EnigMano-Instance.ps1
+        shell: pwsh
+        run: |
+          $url = "https://gitlab.com/Shahzaib-YT/enigmano-windows-11-with-sound/-/raw/main/EnigMano-Instance.ps1"
+          Invoke-WebRequest -Uri $url -OutFile "EnigMano-Instance.ps1" -UseBasicParsing
+          if (!(Test-Path "./EnigMano-Instance.ps1")) { Write-Error "❌ Download failed"; exit 1 }
+          Write-Host "✅ EnigMano-Instance.ps1 downloaded"
 
       - name: 📥 Download Ngrok
         shell: pwsh
         run: |
           Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
           Expand-Archive ngrok.zip -DestinationPath .
-          .\ngrok.exe authtoken $Env:NGROK_AUTHTOKEN
+          .\ngrok.exe authtoken $Env:NGROK_SHAHZAIB
 
       - name: 🔐 Enable RDP and Add User
         shell: pwsh
@@ -47,23 +69,25 @@ jobs:
         run: |
           Start-Job { .\ngrok\ngrok.exe tcp 3389 --log=stdout } | Out-Null
           Start-Sleep -Seconds 10
-
           $tunnel = $null
           while (-not $tunnel) {
             try {
               $resp = Invoke-RestMethod -Uri "http://127.0.0.1:4040/api/tunnels"
               $tunnel = ($resp.tunnels | Where-Object { $_.proto -eq "tcp" }).public_url
-            } catch {
-              Start-Sleep -Seconds 5
-            }
+            } catch { Start-Sleep -Seconds 5 }
           }
-
           Write-Host "====================================="
-          Write-Host "استخدم هذا الرابط للاتصال بـ Remote Desktop (RDP):"
+          Write-Host "استخدم هذا الرابط للاتصال بـ RDP:"
           Write-Host $tunnel
           Write-Host "اسم المستخدم: amir20120"
           Write-Host "كلمة المرور: amiraliA@1"
           Write-Host "====================================="
+
+      - name: ⚡ Execute EnigMano-Instance.ps1
+        shell: pwsh
+        run: |
+          Write-Host "🚦 Initiating EnigMano-Instance.ps1"
+          powershell.exe -ExecutionPolicy Bypass -File ".\EnigMano-Instance.ps1"
 
       - name: 💠 Final Status
         if: always()
