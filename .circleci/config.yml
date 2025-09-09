@@ -3,24 +3,14 @@ version: 2.1
 jobs:
   build:
     docker:
-      - image: cimg/python:3.10
+      - image: cimg/base:stable
     steps:
       - checkout
-      - run: pip install -r requirements.txt
-      - run: pytest
-
-  deploy:
-    docker:
-      - image: cimg/python:3.10
-    steps:
-      - checkout
-      - run: echo "Deploying to server..."
-      # هنا ممكن تكتب أوامر SSH أو استخدام أدوات النشر
+      - run: echo "✅ Hello from CircleCI Linux"
+      - run: uname -a
+      - run: sleep 30
 
 workflows:
-  build_test_deploy:
+  build_and_test:
     jobs:
       - build
-      - deploy:
-          requires:
-            - build
